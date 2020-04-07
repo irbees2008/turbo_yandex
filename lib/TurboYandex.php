@@ -75,10 +75,7 @@ class TurboYandex
 
     public function generate($catname = '')
     {
-        global $lang, $PFILTERS, $template, $twig, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $catmap, $parse, $twigStringLoader;
-
-        // Initiate instance of TWIG engine with string loader
-        $twigString = new \Twig_Environment($twigStringLoader);
+        global $lang, $PFILTERS, $template, $twig, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $catmap, $parse;
 
         // Break if category specified & doesn't exist
         if (($catname != '') && (!isset($catz[$catname]))) {
