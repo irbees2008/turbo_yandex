@@ -5,6 +5,9 @@ namespace Plugins;
 // Исключения.
 use RuntimeException;
 
+// Базовые расширения PHP.
+use stdClass;
+
 /**
  * RSS поток для Yandex Turbo.
  */
@@ -72,7 +75,7 @@ class TurboYandex
 
     public function generate($catname = '')
     {
-        global $lang, $PFILTERS, $template, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $catmap, $parse, $twigStringLoader;
+        global $lang, $PFILTERS, $template, $twig, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $catmap, $parse, $twigStringLoader;
 
         // Initiate instance of TWIG engine with string loader
         $twigString = new \Twig_Environment($twigStringLoader);
@@ -94,13 +97,14 @@ class TurboYandex
             $cacheData = cacheRetrieveFile($cacheFileName, pluginGetVariable('turbo_yandex', 'cacheExpire'), 'turbo_yandex');
             if ($cacheData != false) {
                 // We got data from cache. Return it and stop
-                print $cacheData;
+                header("Content-Type: text/xml; charset=".$lang['encoding']);
+                echo $rendered;
                 return;
             }
         }
 
         // Generate output
-        $output = $this->makeHeader($xcat);
+        $entries = [];
         $maxAge = pluginGetVariable('turbo_yandex', 'news_age');
         $delay = intval(pluginGetVariable('turbo_yandex', 'delay'));
 
@@ -157,7 +161,16 @@ class TurboYandex
 
         foreach ($sqlData as $row) {
             // Make standart system call in 'export' mode
-            $newsVars = news_showone($row['id'], '', array( 'emulate' => $row, 'style' => 'exportVars', 'extractEmbeddedItems' => pluginGetVariable('turbo_yandex', 'textEnclosureEnabled')?1:0, 'plugin' => 'turbo_yandex' ));
+            $newsVars = news_showone(
+                $row['id'],
+                '',
+                array(
+                    'emulate' => $row,
+                    'style' => 'exportVars',
+                    'extractEmbeddedItems' => pluginGetVariable('turbo_yandex', 'textEnclosureEnabled') ? 1 : 0,
+                    'plugin' => 'turbo_yandex',
+                )
+            );
 
             $enclosureList = array();
             // Check if Enclosure `xfields` integration is activated
@@ -202,62 +215,40 @@ class TurboYandex
                 $masterCategoryName = $catList[0];
             }
 
-            $output .= "  <item turbo='true'>\n";
-            $output .= "  <link>".newsGenerateLink($row, false, 0, true)."</link>\n";
-            $output .= "   <pubDate>".gmstrftime('%a, %d %b %Y %H:%M:%S GMT', $row['postdate'])."</pubDate>\n";
-            $output .= "  <turbo:content> \n";
-            $output .= "  <![CDATA[\n";
-            $output .= "  <header>\n";
-            $output .= "   <h1>".$row['title']."</h1>\n";
-            $output .= join("\n", $enclosureList);
+            $entry = new stdClass;
+            $entry->link = newsGenerateLink($row, false, 0, true);
+            $entry->pubDate = gmstrftime('%a, %d %b %Y %H:%M:%S GMT', $row['postdate']);
+            $entry->title = $row['title'];
+            // $output .= join("\n", $enclosureList);
+            $entry->content = $newsVars['short-story'];
 
-            if (count($enclosureList)) {
-                $output .= "\n";
-            }
-
-            $output .= "  </header>\n";
-            $output .= "   <p>".substr(strip_tags($newsVars['short-story']), 0, 350)."</p>\n";
-            $output .= "]]>\n";
-            $output .= "</turbo:content>\n ";
-            $output .= "</item>\n";
+            $entries[] = $entry;
         }
 
         setlocale(LC_TIME, $old_locale);
-        $output .= "</channel>\n";
-        $output .= "</rss>\n";
 
-        // Print output
-        print $output;
+        $tpath = locatePluginTemplates([
+                'channel',
+            ], 'turbo_yandex',
+            pluginGetVariable('turbo_yandex', 'localsource')
+        );
+
+    	$xt = $twig->loadTemplate($tpath['channel'] . 'channel.tpl');
+
+    	$rendered = $xt->render([
+            'link' => $config['home_url'],
+            'title' => $config['home_title'],
+            'description' => $config['description'],
+            'language' => $config['default_lang'],
+            'entries' => $entries,
+
+        ]);
 
         if (pluginGetVariable('turbo_yandex', 'cache')) {
-            cacheStoreFile($cacheFileName, $output, 'turbo_yandex');
+            cacheStoreFile($cacheFileName, $rendered, 'turbo_yandex');
         }
-    }
 
-    protected function makeHeader($xcat)
-    {
-        global $config, $twigStringLoader;
-
-        // Initiate instance of TWIG engine with string loader
-        $twigString = new \Twig_Environment($twigStringLoader);
-        $feedTitleFormat = pluginGetVariable('turbo_yandex', 'feed_title')?pluginGetVariable('turbo_yandex', 'feed_title'):'{{ siteTitle }}';
-
-        // Generate RSS header
-        $line = '<?xml version="1.0" encoding="windows-1251"?>'."\n";
-        $line.= ' <rss xmlns:yandex="http://news.yandex.ru" xmlns:media="http://search.yahoo.com/mrss/"
-    	xmlns:turbo="http://turbo.yandex.ru" version="2.0">'."\n";
-        $line.= " <channel>\n";
-
-        // Channel title
-        $line.= " <title>".$config['home_title']."</title>\n";
-
-        // LINK
-        $line.= "
-    		<link>".$config['home_url']."</link>\n";
-
-        // Description
-        $line.= " <description>".$config['description']."</description>\n";
-
-        return $line;
+    	header("Content-Type: text/xml; charset=".$lang['encoding']);
+        echo $rendered;
     }
 }
