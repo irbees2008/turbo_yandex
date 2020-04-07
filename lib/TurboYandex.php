@@ -210,8 +210,10 @@ class TurboYandex
             $output .= join("\n", $enclosureList);
 
             if (count($enclosureList)) {
-                $output .= "\n</header>\n";
+                $output .= "\n";
             }
+
+            $output .= "  </header>\n";
             $output .= "   <p>".substr(strip_tags($newsVars['short-story']), 0, 350)."</p>\n";
             $output .= "]]>\n";
             $output .= "</turbo:content>\n ";
