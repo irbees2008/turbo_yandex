@@ -50,6 +50,15 @@ class TurboYandex
     private function __construct()
     {
         $this->pluginLink = generatePluginLink($this->plugin, null);
+
+        global $SYSTEM_FLAGS, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $twig, $config;
+
+        // Disable executing of `index` action (widget plugins and so on..)
+        actionDisable('index');
+
+        // Suppress templates
+        $SUPRESS_TEMPLATE_SHOW = 1;
+        $SUPRESS_MAINBLOCK_SHOW = 1;
     }
 
     /**
@@ -67,13 +76,6 @@ class TurboYandex
 
         // Initiate instance of TWIG engine with string loader
         $twigString = new \Twig_Environment($twigStringLoader);
-
-        // Disable executing of `index` action (widget plugins and so on..)
-        actionDisable('index');
-
-        // Suppress templates
-        $SUPRESS_TEMPLATE_SHOW = 1;
-        $SUPRESS_MAINBLOCK_SHOW = 1;
 
         // Break if category specified & doesn't exist
         if (($catname != '') && (!isset($catz[$catname]))) {
