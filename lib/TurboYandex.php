@@ -17,7 +17,7 @@ class TurboYandex
      * Номер версии плагина.
      * @var string
      */
-    const VERSION = '0.2.0';
+    const VERSION = '0.4.0';
 
     /**
      * Экземпляр плагина.
