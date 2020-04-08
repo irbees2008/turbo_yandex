@@ -1,77 +1,167 @@
 <?php
 
-// Protect against hack attempts
-if (!defined('NGCMS')) {
+// Р—Р°С‰РёС‚Р° РѕС‚ РїРѕРїС‹С‚РѕРє РІР·Р»РѕРјР°.
+if (! defined('NGCMS')) {
     die('HAL');
 }
 
-//
-// Configuration file for plugin
-//
+// Р”СѓР±Р»РёСЂРѕРІР°РЅРёРµ РіР»РѕР±Р°Р»СЊРЅС‹С… РїРµСЂРµРјРµРЅРЅС‹С….
+$plugin = 'turbo_yandex';
+$pluginLink = generatePluginLink($plugin, null, [], [], true, true);
 
-// Preload config file
+// РџРѕРґРіСЂСѓР·РєР° Р±РёР±Р»РёРѕС‚РµРє-С„Р°Р№Р»РѕРІ РїР»Р°РіРёРЅР°.
 plugins_load_config();
+LoadPluginLang($plugin, 'backend', '', '', ':');
+loadPluginLibrary($plugin, 'helpers');
 
-$xfEnclosureValues = array( '' => '');
+// РСЃРїРѕР»СЊР·СѓРµРј С„СѓРЅРєС†РёРё РёР· РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІР° `Plugins`.
+use function Plugins\catz;
+use function Plugins\setting;
+use function Plugins\dd;
+
+// РџРѕРґРіРѕС‚РѕРІРєР° РїРµСЂРµРјРµРЅРЅС‹С….
 
 // IF plugin 'XFIELDS' is enabled - load it to prepare `enclosure` integration
+$xfEnclosureValues = [
+    '' => null,
+
+];
+
 if (getPluginStatusActive('xfields')) {
-    include_once(root."/plugins/xfields/xfields.php");
+    loadPluginLibrary('xfields', 'common');
 
     // Load XFields config
-    if (is_array($xfc=xf_configLoad())) {
-        foreach ($xfc['news'] as $fid => $fdata) {
-            $xfEnclosureValues[$fid] = $fid.' ('.$fdata['title'].')';
+    if (is_array($xarray = xf_configLoad())) {
+        foreach ($xarray['news'] as $id => $data) {
+            $xfEnclosureValues[$id] = "{$id} ($data[title])";
         }
     }
 }
 
 // For example - find 1st category with news for demo URL
-$demoCategory = '';
-foreach ($catz as $scanCat) {
-    if ($scanCat['posts'] > 0) {
-        $demoCategory = $scanCat['alt'];
+$demoCategory = null;
+
+foreach (catz() as $category) {
+    if ($category['posts'] > 0) {
+        $demoCategory = $category['alt'];
         break;
     }
 }
 
-// Fill configuration parameters
-$cfg = array();
+// Р—Р°РїРѕР»РЅРёС‚СЊ РїР°СЂР°РјРµС‚СЂС‹ РєРѕРЅС„РёРіСѓСЂР°С†РёРё.
+$cfg = [];
 
-$cfgX = array();
-array_push($cfg, array('descr' => '<b>Плагин экспорта ленты новостей для поисковой системы Яndex</b><br>Полная лента новостей доступна по адресу: <b>'.generatePluginLink('turbo_yandex', '', array(), array(), true, true).(($demoCategory != '')?'<br/>Лента новостей для категории <i>'.$catz[$demoCategory]['name'].'</i>: '.generatePluginLink('turbo_yandex', 'category', array('category' => $demoCategory), array(), true, true):'')));
-array_push($cfgX, array('type' => 'input',	'name' => 'feed_title', 'title' => 'Название RSS потока для полной ленты', 'descr' => 'Допустимые переменные:<br/><b>{{siteTitle}}</b> - название сайта<br/>Значение по умолчанию: <b>{{siteTitle}}</b>', 'html_flags' => 'style="width: 250px;"', 'value' => pluginGetVariable('turbo_yandex', 'feed_title')?pluginGetVariable('turbo_yandex', 'feed_title'):'{{siteTitle}}'));
-array_push($cfgX, array('type' => 'text',	'name' => 'news_title', 'title' => 'Заголовок (название) новости', 'descr' => 'Допустимые переменные:<br/><b>{{siteTitle}}</b> - название сайта<br/><b>{{newsTitle}}</b> - заголовок новости<br/><b>{{masterCategoryName}}</b> - название <b>главной</b> категории новости<br/>Значение по умолчанию: <b>{% if masterCategoryName %}{{masterCategoryName}} :: {% endif %}{{newsTitle}}</b>', 'html_flags' => 'style="width: 350px;"', 'value' => pluginGetVariable('turbo_yandex', 'news_title')?pluginGetVariable('turbo_yandex', 'news_title'):'{% if masterCategoryName %}{{masterCategoryName}} :: {% endif %}{{newsTitle}}'));
-array_push($cfgX, array('type' => 'select',	'name' => 'full_format', 'title' => 'Формат генерации полного текста новости для ленты Яndex', 'descr' => '<b>Полная</b> - выводится только полная часть новости<br><b>Короткая+полная</b> - выводится короткая + полная часть новости', 'values' => array( '0' => 'Полная', '1' => 'Полная+короткая'), value => pluginGetVariable('turbo_yandex', 'full_format')));
-array_push($cfgX, array('type' => 'input',	'name' => 'news_age', 'title' => 'Максимальный срок давности новостей для публикации в ленте', 'descr' => 'Яndex индексирует новости не старше <b>8 суток</b>.<br/>Значение по умолчанию: 10 суток', value => pluginGetVariable('turbo_yandex', 'news_age')));
-array_push($cfgX, array('type' => 'input',	'name' => 'delay', 'title' => 'Отсрочка вывода новостей в ленту', 'descr' => 'Вы можете задать время (<b>в минутах</b>) на которое будет откладываться вывод новостей в RSS ленту',value => pluginGetVariable('turbo_yandex', 'delay')));
-array_push($cfg, array('mode' => 'group',	'title' => '<b>Общие настройки</b>', 'entries' => $cfgX));
+// РћРїРёСЃР°РЅРёРµ РїР»Р°РіРёРЅР°.
+array_push($cfg, [
+    'descr' => $lang[$plugin.':description'],
 
-$cfgX = array();
-array_push($cfgX, array('type' => 'input', 'name' => 'feed_image_title', 'title' => 'Заголовок (title) для логотипа', 'html_flags' => 'style="width: 250px;"', 'value' => pluginGetVariable('turbo_yandex', 'feed_image_title')));
-array_push($cfgX, array('type' => 'input', 'name' => 'feed_image_link', 'title' => 'URL с изображением логотипа', 'descr' => 'Желательный размер логотипа - 100 пикселей по максимальной стороне', 'html_flags' => 'style="width: 250px;"', 'value' => pluginGetVariable('turbo_yandex', 'feed_image_link')));
-array_push($cfgX, array('type' => 'input', 'name' => 'feed_image_url', 'title' => 'Ссылка (link) для перехода по клику на логотип', 'descr' => 'Обычно - URL вашего сайта', 'html_flags' => 'style="width: 250px;"', 'value' => pluginGetVariable('turbo_yandex', 'feed_image_url')));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Отображение логотипа</b>', 'entries' => $cfgX));
+]);
 
-$cfgX = array();
-array_push($cfgX, array('name' => 'xfEnclosureEnabled', 'title' => "Генерация поля 'Enclosure' используя данные плагина xfields", 'descr' => "<b>Да</b> - включить генерацию<br /><b>Нет</b> - отключить генерацию</small>", 'type' => 'select', 'values' => array( '1' => 'Да', '0' => 'Нет'), 'value' => intval(pluginGetVariable($plugin, 'xfEnclosureEnabled'))));
-array_push($cfgX, array('name' => 'xfEnclosure', 'title' => "ID поля плагина <b>xfields</b>, которое будет использоваться для генерации поля <b>Enclosure</b>", 'type' => 'select', 'values' => $xfEnclosureValues, 'value' => pluginGetVariable($plugin, 'xfEnclosure')));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Генерация поля <b>enclosure</b> из поля xfields</b>', 'entries' => $cfgX));
+array_push($cfg, [
+    'descr' => sprintf(
+        $lang[$plugin.':description_all'],
+        $pluginLink,
+        $pluginLink
+    ),
 
-$cfgX = array();
-array_push($cfgX, array('name' => 'textEnclosureEnabled', 'title' => "Вывод в поле 'Enclosure' всех изображений из текста новости (используя HTML тег &lt;img&gt;)", 'descr' => "<b>Да</b> - выводить все изображения<br /><b>Нет</b> - не выводить</small>", 'type' => 'select', 'values' => array( '1' => 'Да', '0' => 'Нет'), 'value' => intval(pluginGetVariable($plugin, 'textEnclosureEnabled'))));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Генерация поля <b>enclosure</b> из текста новости</b>', 'entries' => $cfgX));
+]);
 
-$cfgX = array();
-array_push($cfgX, array('name' => 'cache', 'title' => "Использовать кеширование данных<br /><small><b>Да</b> - кеширование используется<br /><b>Нет</b> - кеширование не используется</small>", 'type' => 'select', 'values' => array( '1' => 'Да', '0' => 'Нет'), 'value' => intval(pluginGetVariable($plugin, 'cache'))));
-array_push($cfgX, array('name' => 'cacheExpire', 'title' => "Период обновления кеша<br /><small>(через сколько секунд происходит обновление кеша. Значение по умолчанию: <b>60</b>)</small>", 'type' => 'input', 'value' => intval(pluginGetVariable($plugin, 'cacheExpire'))?pluginGetVariable($plugin, 'cacheExpire'):'60'));
-array_push($cfg, array('mode' => 'group', 'title' => '<b>Настройки кеширования</b>', 'entries' => $cfgX));
+if ($demoCategory) {
+    array_push($cfg, [
+        'descr' => sprintf(
+            $lang[$plugin.':description_category'],
+            generatePluginLink($plugin, 'category', ['category' => $demoCategory], [], true, true),
+            $catz[$demoCategory]['name']
+        ),
 
-// RUN
-if ($_REQUEST['action'] == 'commit') {
-    // If submit requested, do config save
-    commit_plugin_config_changes($plugin, $cfg);
-    print_commit_complete($plugin);
-} else {
-    generate_config_page($plugin, $cfg);
+    ]);
 }
+
+
+// РћСЃРЅРѕРІРЅС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё.
+array_push($cfg, [
+    'mode' => 'group',
+    'title' => $lang[$plugin.':group_main'],
+    'entries' => [
+        [
+            'name' => 'skipcat',
+            'title' => $lang[$plugin.':skipcat'],
+            'type' => 'input',
+            'value' => setting($plugin, 'skipcat', null),
+
+        ], [
+            'name' => 'extractEmbeddedItems',
+            'title' => $lang[$plugin.':extractEmbeddedItems'],
+            'descr' => $lang[$plugin.':extractEmbeddedItems#descr'],
+            'type' => 'select',
+            'values' => [
+                $lang['noa'],
+                $lang['yesa']
+            ],
+            'value' => (int) setting($plugin, 'extractEmbeddedItems', 0),
+
+        ],
+
+    ],
+
+]);
+
+// РќР°СЃС‚СЂРѕР№РєРё РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ.
+array_push($cfg, [
+    'mode' => 'group',
+    'title' => $lang[$plugin.':group_view'],
+    'entries' => [
+        [
+            'name' => 'localsource',
+            'title' => $lang[$plugin.':localsource'],
+            'descr' => $lang[$plugin.':localsource#descr'],
+            'type' => 'select',
+            'values' => [
+                0 => $lang[$plugin.':localsource_0'],
+                1 => $lang[$plugin.':localsource_1']
+            ],
+            'value' => (int) setting($plugin, 'localsource', 1),
+
+        ],
+
+    ],
+
+]);
+
+// РќР°СЃС‚СЂРѕР№РєРё РєРµС€РёСЂРѕРІР°РЅРёСЏ.
+array_push($cfg, [
+    'mode' => 'group',
+    'title' => $lang[$plugin.':group_cache'],
+    'entries' => [
+        [
+            'name' => 'cache',
+            'title' => $lang[$plugin.':cache'],
+            'descr' => $lang[$plugin.':cache#descr'],
+            'type' => 'select',
+            'values' => [
+                $lang['noa'],
+                $lang['yesa']
+            ],
+            'value' => (int) setting($plugin, 'cacheExpire', 0),
+
+        ], [
+            'name' => 'cacheExpire',
+            'title' => $lang[$plugin.':cacheExpire'],
+            'descr' => $lang[$plugin.':cacheExpire#descr'],
+            'type' => 'input',
+            'value' => (int) setting($plugin, 'cacheExpire', 60),
+
+        ],
+
+    ],
+
+]);
+
+// Р•СЃР»Рё Р±С‹Р»Р° РѕС‚РїСЂР°РІР»РµРЅР° С„РѕСЂРјР°, С‚Рѕ СЃРѕС…СЂР°РЅСЏРµРј РЅР°СЃС‚СЂРѕР№РєРё.
+if ('commit' === $_REQUEST['action']) {
+    commit_plugin_config_changes($plugin, $cfg);
+
+    return print_commit_complete($plugin);
+}
+
+generate_config_page($plugin, $cfg);
