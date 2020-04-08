@@ -54,7 +54,7 @@ class TurboYandex
     {
         $this->pluginLink = generatePluginLink($this->plugin, null);
 
-        global $SYSTEM_FLAGS, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $twig, $config;
+        global $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW;
 
         // Disable executing of `index` action (widget plugins and so on..)
         actionDisable('index');
@@ -75,7 +75,7 @@ class TurboYandex
 
     public function generate($catname = '')
     {
-        global $lang, $PFILTERS, $template, $twig, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $catmap, $parse;
+        global $lang, $PFILTERS, $template, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $catmap, $parse;
 
         // Break if category specified & doesn't exist
         if (($catname != '') && (!isset($catz[$catname]))) {
@@ -95,7 +95,9 @@ class TurboYandex
             if ($cacheData != false) {
                 // We got data from cache. Return it and stop
                 header("Content-Type: text/xml; charset=".$lang['encoding']);
+
                 echo $rendered;
+
                 return;
             }
         }
@@ -224,15 +226,7 @@ class TurboYandex
 
         setlocale(LC_TIME, $old_locale);
 
-        $tpath = locatePluginTemplates([
-                'channel',
-            ], 'turbo_yandex',
-            pluginGetVariable('turbo_yandex', 'localsource')
-        );
-
-    	$xt = $twig->loadTemplate($tpath['channel'] . 'channel.tpl');
-
-    	$rendered = $xt->render([
+    	$rendered = $this->render([
             'link' => $config['home_url'],
             'title' => $config['home_title'],
             'description' => $config['description'],
@@ -246,6 +240,18 @@ class TurboYandex
         }
 
     	header("Content-Type: text/xml; charset=".$lang['encoding']);
+
         echo $rendered;
+    }
+
+    public function render(array $vars)
+    {
+        $tpath = locatePluginTemplates([
+                'channel',
+            ], 'turbo_yandex',
+            setting('turbo_yandex', 'localsource', 1)
+        );
+
+        return view($tpath['channel'] . 'channel.tpl', $vars);
     }
 }
