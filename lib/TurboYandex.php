@@ -197,8 +197,8 @@ class TurboYandex
             $entry->pubDate = gmstrftime('%a, %d %b %Y %H:%M:%S GMT', $row['postdate']);
             $entry->title = $row['title'];
             // $output .= join("\n", $enclosureList);
-            $entry->short = strip_tags($newsVars['short-story'], '<p><img><iframe><br><ul><ol><li><b><strong><i><em><sup><sub><ins><del><small><big><pre></pre><abbr><u><a>');
-            $entry->full = strip_tags($newsVars['full-story'], '<p><img><iframe><br><ul><ol><li><b><strong><i><em><sup><sub><ins><del><small><big><pre></pre><abbr><u><a>');
+            $entry->short = $this->stripTags($newsVars['short-story']);
+            $entry->full = $this->stripTags($newsVars['full-story']);
 
             $entries[] = $entry;
         }
@@ -221,6 +221,14 @@ class TurboYandex
     	header("Content-Type: text/xml; charset=".$lang['encoding']);
 
         echo $rendered;
+    }
+
+    protected function stripTags(string $content)
+    {
+        return strip_tags(
+            $content,
+            '<p><figure><img><iframe><br><ul><ol><li><b><strong><i><em><sup><sub><ins><del><small><big><pre></pre><abbr><u><a>'
+        );
     }
 
     public function render(array $vars)
