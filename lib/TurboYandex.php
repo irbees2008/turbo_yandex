@@ -53,7 +53,7 @@ class TurboYandex
 
     public function generate($catname = '')
     {
-        global $lang, $PFILTERS, $template, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $catmap, $parse;
+        global $lang, $config, $mysql, $catz, $catmap;
 
         // Break if category specified & doesn't exist
         if (($catname != '') && (!isset($catz[$catname]))) {
