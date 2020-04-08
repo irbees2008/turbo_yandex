@@ -19,16 +19,33 @@
                 <![CDATA[
                     <header>
                         <h1>{{ entry.title }}</h1>
-                        <!--h2>номер телефона</h2-->
-                        <!--
+                        {#
+                            <h2>номер телефона</h2>
                             <menu>
-                                <a href="http://example.com/page1.html">Пункт меню 1</a>
-                                <a href="http://example.com/page2.html">Пункт меню 2</a>
+                                <a href="{{ link }}">Главная</a>
+                                <a href="{{ link }}/catalog">Каталог</a>
+                                <a href="{{ link }}/static/contacts.html">Контакты</a>
                             </menu>
-                        -->
+                        #}
                     </header>
-                    <p>{{ entry.short | striptags | truncateHTML(350, '...') }}</p>
-                    {{ entry.full }}
+
+                    {# Отображение короткой и полной новости #}
+                    {{ entry.short }} {{ entry.full }}
+
+                    {#
+                        Пример вырезания тегов и укорачивание содержимого
+
+                        <p>{{ entry.short | striptags | truncateHTML(350, '...') }}</p>
+                    #}
+
+                    {#
+                        Пример замены относительных ссылок на абсолютные
+
+                        {{ entry.full | replace({
+                            'src="/': 'src="' ~ link ~ '/',
+                            'src="../': 'src="' ~ link ~ '/',
+                        }) }}
+                    #}
                 ]]>
             </turbo:content>
         </item>
