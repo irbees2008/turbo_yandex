@@ -15,15 +15,9 @@ class TurboYandex
 {
     /**
      * Номер версии плагина.
-     * @var string
+     * @const string
      */
     const VERSION = '0.4.0';
-
-    /**
-     * Экземпляр плагина.
-     * @var static
-     */
-    private static $instance;
 
     /**
      * Идентификатор плагина.
@@ -32,25 +26,9 @@ class TurboYandex
     protected $plugin = 'turbo_yandex';
 
     /**
-     * Gets the instance via lazy initialization (created on first usage).
-     * @return XFilter
+     * Создать экземпляр плагина.
      */
-    public static function getInstance()
-    {
-        if (null === static::$instance) {
-            static::$instance = new static();
-        }
-
-        return static::$instance;
-    }
-
-    /**
-     * Is not allowed to call from outside to prevent from creating multiple instances,
-     * to use the singleton, you have to obtain the instance from XFilter::getInstance() instead
-     *
-     * @return void
-     */
-    private function __construct()
+    public function __construct()
     {
         $this->pluginLink = generatePluginLink($this->plugin, null);
 
@@ -70,7 +48,7 @@ class TurboYandex
      */
     public function version()
     {
-        return static::VERSION;
+        return self::VERSION;
     }
 
     public function generate($catname = '')
