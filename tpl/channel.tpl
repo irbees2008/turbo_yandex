@@ -46,6 +46,14 @@
                             'src="../': 'src="' ~ link ~ '/',
                         }) }}
                     #}
+
+                    {#
+                        Пример вывода коллекции изображений
+
+                        {% for image in entry.xfields.poster.entries %}
+                            <img src="{{ image.url }}" alt="">
+                        {% endfor %}
+                    #}
                 ]]>
             </turbo:content>
         </item>

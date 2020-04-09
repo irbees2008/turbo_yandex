@@ -200,6 +200,10 @@ class TurboYandex
             $entry->short = $this->stripTags($newsVars['short-story']);
             $entry->full = $this->stripTags($newsVars['full-story']);
 
+            if (getPluginStatusActive('xfields')) {
+                $entry->xfields = $newsVars['p']['xfields'];
+            }
+
             $entries[] = $entry;
         }
 
