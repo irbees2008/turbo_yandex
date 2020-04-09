@@ -15,15 +15,9 @@ class TurboYandex
 {
     /**
      * Номер версии плагина.
-     * @var string
+     * @const string
      */
     const VERSION = '0.4.0';
-
-    /**
-     * Экземпляр плагина.
-     * @var static
-     */
-    private static $instance;
 
     /**
      * Идентификатор плагина.
@@ -32,25 +26,9 @@ class TurboYandex
     protected $plugin = 'turbo_yandex';
 
     /**
-     * Gets the instance via lazy initialization (created on first usage).
-     * @return XFilter
+     * Создать экземпляр плагина.
      */
-    public static function getInstance()
-    {
-        if (null === static::$instance) {
-            static::$instance = new static();
-        }
-
-        return static::$instance;
-    }
-
-    /**
-     * Is not allowed to call from outside to prevent from creating multiple instances,
-     * to use the singleton, you have to obtain the instance from XFilter::getInstance() instead
-     *
-     * @return void
-     */
-    private function __construct()
+    public function __construct()
     {
         $this->pluginLink = generatePluginLink($this->plugin, null);
 
@@ -70,12 +48,12 @@ class TurboYandex
      */
     public function version()
     {
-        return static::VERSION;
+        return self::VERSION;
     }
 
     public function generate($catname = '')
     {
-        global $lang, $PFILTERS, $template, $config, $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW, $mysql, $catz, $catmap, $parse;
+        global $lang, $config, $mysql, $catz, $catmap;
 
         // Break if category specified & doesn't exist
         if (($catname != '') && (!isset($catz[$catname]))) {
@@ -219,7 +197,8 @@ class TurboYandex
             $entry->pubDate = gmstrftime('%a, %d %b %Y %H:%M:%S GMT', $row['postdate']);
             $entry->title = $row['title'];
             // $output .= join("\n", $enclosureList);
-            $entry->content = $newsVars['short-story'];
+            $entry->short = $this->stripTags($newsVars['short-story']);
+            $entry->full = $this->stripTags($newsVars['full-story']);
 
             $entries[] = $entry;
         }
@@ -242,6 +221,14 @@ class TurboYandex
     	header("Content-Type: text/xml; charset=".$lang['encoding']);
 
         echo $rendered;
+    }
+
+    protected function stripTags(string $content)
+    {
+        return strip_tags(
+            $content,
+            '<p><figure><img><iframe><br><ul><ol><li><b><strong><i><em><sup><sub><ins><del><small><big><pre></pre><abbr><u><a>'
+        );
     }
 
     public function render(array $vars)

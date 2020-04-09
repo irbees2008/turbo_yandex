@@ -27,7 +27,8 @@
                             </menu>
                         -->
                     </header>
-                    <p>{{ entry.content | striptags | truncateHTML(350, '...') }}</p>
+                    <p>{{ entry.short | striptags | truncateHTML(350, '...') }}</p>
+                    {{ entry.full }}
                 ]]>
             </turbo:content>
         </item>

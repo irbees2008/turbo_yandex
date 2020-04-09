@@ -24,14 +24,14 @@ register_plugin_page('turbo_yandex', 'category', 'plugin_turbo_yandex_category',
 
 function plugin_turbo_yandex()
 {
-	$turboYandex = TurboYandex::getInstance();
+	$turboYandex = new TurboYandex();
 
     $turboYandex->generate();
 }
 
 function plugin_turbo_yandex_category($params)
 {
-	$turboYandex = TurboYandex::getInstance();
+	$turboYandex = new TurboYandex();
 
     $turboYandex->generate($params['category']);
 }
