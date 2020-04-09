@@ -197,6 +197,7 @@ class TurboYandex
             $entry->pubDate = gmstrftime('%a, %d %b %Y %H:%M:%S GMT', $row['postdate']);
             $entry->title = $row['title'];
             // $output .= join("\n", $enclosureList);
+            $entry->content = $newsVars['short-story'].' '.$newsVars['full-story'];
             $entry->short = $this->stripTags($newsVars['short-story']);
             $entry->full = $this->stripTags($newsVars['full-story']);
 

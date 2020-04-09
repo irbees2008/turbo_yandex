@@ -29,17 +29,19 @@
                         #}
                     </header>
 
-                    {# ќтображение короткой и полной новости #}
+                    {# ќтображение короткой и полной новости с предварительно вырезанными недопустимыми тегами. #}
                     {{ entry.short }} {{ entry.full }}
 
                     {#
-                        ѕример вырезани€ тегов и укорачивани€ содержимого
+                        ѕримеры самосто€тельного вырезани€ тегов и укорачивани€ содержимого.
 
-                        <p>{{ entry.short | striptags | truncateHTML(350, '...') }}</p>
+                        <p>{{ entry.content | striptags }}</p>
+                        <p>{{ entry.content | striptags('<figure><img><p><br><ul><ol><li><b><i><u><pre></pre><a>') }}</p>
+                        <p>{{ entry.content | striptags | truncateHTML(350, '...') }}</p>
                     #}
 
                     {#
-                        ѕример замены относительных ссылок на абсолютные
+                        ѕример замены относительных ссылок на абсолютные.
 
                         {{ entry.full | replace({
                             'src="/': 'src="' ~ link ~ '/',
@@ -48,10 +50,21 @@
                     #}
 
                     {#
-                        ѕример вывода коллекции изображений
+                        ѕримерв использовани€ доп. полей.
 
+                        1) ≈сли поле имеет текстовый тип.
+                        {{ entry.xfields.specification.value ? entry.xfields.specification.value : '’арактеристики не указаны' }}
+
+                        2) ≈сли поле имеет числовой тип.
+                        {% if entry.xfields.price.value >= 0 %}
+                            стоимость от {{ entry.xfields.price.value }} рублей
+                        {% endif %}
+
+                        3) ≈сли поле представл€ет собой группу изображений.
                         {% for image in entry.xfields.poster.entries %}
-                            <img src="{{ image.url }}" alt="">
+                            <figure>
+                                <img src="{{ image.url }}" alt="" />
+                            </figure>
                         {% endfor %}
                     #}
                 ]]>
