@@ -57,10 +57,10 @@ class TurboYandex
 
         // Generate cache file name [ we should take into account SWITCHER plugin ]
         // Take into account: FLAG: use_hide, check if user is logged in
-        $cacheFileName = md5('turbo_yandex'.$config['theme'].$config['home_url'].$config['default_lang'].(is_array($xcat)?$xcat['id']:'').pluginGetVariable('turbo_yandex', 'use_hide').is_array($userROW)).'.txt';
+        $cacheFileName = md5($this->plugin.$config['theme'].$config['home_url'].$config['default_lang']).'.txt';
 
-        if (pluginGetVariable('turbo_yandex', 'cache')) {
-            $cacheData = cacheRetrieveFile($cacheFileName, pluginGetVariable('turbo_yandex', 'cacheExpire'), 'turbo_yandex');
+        if (setting($this->plugin, 'cache', false)) {
+            $cacheData = cacheRetrieveFile($cacheFileName, setting($this->plugin, 'cacheExpire', 1440), $this->plugin);
             if ($cacheData != false) {
                 // We got data from cache. Return it and stop
                 header("Content-Type: text/xml; charset=".$lang['encoding']);
@@ -89,8 +89,8 @@ class TurboYandex
                 array(
                     'emulate' => $row,
                     'style' => 'exportVars',
-                    'extractEmbeddedItems' => pluginGetVariable('turbo_yandex', 'extractEmbeddedItems') ? 1 : 0,
-                    'plugin' => 'turbo_yandex',
+                    'extractEmbeddedItems' => setting($this->plugin, 'extractEmbeddedItems', false),
+                    'plugin' => $this->plugin,
                 )
             );
 
@@ -136,8 +136,8 @@ class TurboYandex
 
         ]);
 
-        if (pluginGetVariable('turbo_yandex', 'cache')) {
-            cacheStoreFile($cacheFileName, $rendered, 'turbo_yandex');
+        if (setting($this->plugin, 'cache', false)) {
+            cacheStoreFile($cacheFileName, $rendered, $this->plugin);
         }
 
     	header("Content-Type: text/xml; charset=".$lang['encoding']);
@@ -157,8 +157,8 @@ class TurboYandex
     {
         $tpath = locatePluginTemplates([
                 'channel',
-            ], 'turbo_yandex',
-            setting('turbo_yandex', 'localsource', 1)
+            ], $this->plugin,
+            setting($this->plugin, 'localsource', 1)
         );
 
         return view($tpath['channel'] . 'channel.tpl', $vars);
