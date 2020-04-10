@@ -32,6 +32,12 @@
                     {# Отображение короткой и полной новости с предварительно вырезанными недопустимыми тегами. #}
                     {{ entry.short }} {{ entry.full }}
 
+                    {% for image in entry.images %}
+                        <figure>
+                            <img src="{{ image.url }}" alt="" />
+                        </figure>
+                    {% endfor %}
+
                     {#
                         Примеры самостоятельного вырезания тегов и укорачивания содержимого.
 
@@ -66,6 +72,12 @@
                                 <img src="{{ image.url }}" alt="" />
                             </figure>
                         {% endfor %}
+                    #}
+
+                    {#
+                        Пример отображения главной категории и дерева категорий новости.
+
+                        {{ entry.category }} {{ entry.categories }}
                     #}
                 ]]>
             </turbo:content>
