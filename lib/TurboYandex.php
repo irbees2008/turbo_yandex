@@ -26,6 +26,12 @@ class TurboYandex
     protected $plugin = 'turbo_yandex';
 
     /**
+     * Кодировка.
+     * @var string
+     */
+    protected $encoding;
+
+    /**
      * Создать экземпляр плагина.
      */
     public function __construct()
@@ -40,6 +46,8 @@ class TurboYandex
         // Suppress templates
         $SUPRESS_TEMPLATE_SHOW = 1;
         $SUPRESS_MAINBLOCK_SHOW = 1;
+
+        $this->encoding = trans('encoding');
     }
 
     /**
@@ -53,17 +61,17 @@ class TurboYandex
 
     public function generate()
     {
-        global $lang, $config, $mysql, $catz, $catmap;
+        global $mysql, $catz, $catmap;
 
         // Generate cache file name [ we should take into account SWITCHER plugin ]
         // Take into account: FLAG: use_hide, check if user is logged in
-        $cacheFileName = md5($this->plugin.$config['theme'].$config['home_url'].$config['default_lang']).'.txt';
+        $cacheFileName = md5($this->plugin.config('theme', 'default').config('home_url', home).config('default_lang', 'ru')).'.txt';
 
         if (setting($this->plugin, 'cache', false)) {
             $cacheData = cacheRetrieveFile($cacheFileName, setting($this->plugin, 'cacheExpire', 1440), $this->plugin);
             if ($cacheData != false) {
                 // We got data from cache. Return it and stop
-                header("Content-Type: text/xml; charset=".$lang['encoding']);
+                header("Content-Type: text/xml; charset=".$this->encoding);
 
                 echo $rendered;
 
@@ -128,10 +136,10 @@ class TurboYandex
         setlocale(LC_TIME, $old_locale);
 
     	$rendered = $this->render([
-            'link' => $config['home_url'],
-            'title' => $config['home_title'],
-            'description' => $config['description'],
-            'language' => $config['default_lang'],
+            'link' => config('home_url', home),
+            'title' => config('home_title', engineName),
+            'description' => config('description', ''),
+            'language' => config('default_lang', 'ru'),
             'entries' => $entries,
 
         ]);
@@ -140,7 +148,7 @@ class TurboYandex
             cacheStoreFile($cacheFileName, $rendered, $this->plugin);
         }
 
-    	header("Content-Type: text/xml; charset=".$lang['encoding']);
+    	header("Content-Type: text/xml; charset=".$this->encoding);
 
         echo $rendered;
     }
