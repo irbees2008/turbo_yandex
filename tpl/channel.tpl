@@ -73,6 +73,12 @@
                             </figure>
                         {% endfor %}
                     #}
+
+                    {#
+                        Пример отображения главной категории и дерева категорий новости.
+
+                        {{ entry.category }} {{ entry.categories }}
+                    #}
                 ]]>
             </turbo:content>
         </item>

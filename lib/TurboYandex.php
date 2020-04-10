@@ -61,8 +61,6 @@ class TurboYandex
 
     public function generate()
     {
-        global $catz, $catmap;
-
         // Generate cache file name [ we should take into account SWITCHER plugin ]
         // Take into account: FLAG: use_hide, check if user is logged in
         $cacheFileName = md5($this->plugin.config('theme', 'default').config('home_url', home).config('default_lang', 'ru')).'.txt';
@@ -102,19 +100,6 @@ class TurboYandex
                 )
             );
 
-            // Calculate news category list
-            $catList = array();
-            foreach (explode(",", $row['catid']) as $v) {
-                if (isset($catmap[$v])) {
-                    $catList []= $catz[$catmap[$v]]['name'];
-                }
-            }
-
-            $masterCategoryName = '';
-            if (count($catList)) {
-                $masterCategoryName = $catList[0];
-            }
-
             $entry = new stdClass;
             $entry->link = newsGenerateLink($row, false, 0, true);
             $entry->pubDate = gmstrftime('%a, %d %b %Y %H:%M:%S GMT', $row['postdate']);
@@ -129,6 +114,9 @@ class TurboYandex
             if (getPluginStatusActive('xfields')) {
                 $entry->xfields = $newsVars['p']['xfields'];
             }
+
+            $entry->category = $newsVars['masterCategory'];
+            $entry->categories = $newsVars['category'];
 
             $entries[] = $entry;
         }
