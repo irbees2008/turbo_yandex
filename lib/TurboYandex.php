@@ -61,7 +61,7 @@ class TurboYandex
 
     public function generate()
     {
-        global $mysql, $catz, $catmap;
+        global $catz, $catmap;
 
         // Generate cache file name [ we should take into account SWITCHER plugin ]
         // Take into account: FLAG: use_hide, check if user is logged in
@@ -87,7 +87,7 @@ class TurboYandex
 
         // Fetch SQL record
         $query = "select * from ".prefix."_news where approve=1 order by id desc limit 100";
-        $sqlData = $mysql->select($query);
+        $sqlData = database()->select($query);
 
         foreach ($sqlData as $row) {
             // Make standart system call in 'export' mode
