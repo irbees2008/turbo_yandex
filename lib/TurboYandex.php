@@ -138,7 +138,7 @@ class TurboYandex
     	$rendered = $this->render([
             'link' => config('home_url', home),
             'title' => config('home_title', engineName),
-            'description' => config('description', ''),
+            'description' => config('description', null),
             'language' => config('default_lang', 'ru'),
             'entries' => $entries,
 
