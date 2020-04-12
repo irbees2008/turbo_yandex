@@ -125,7 +125,7 @@ function plugin_turbo_yandex_install($action)
                 'cache' => 0,
 
                 // Использовать кеширование данных.
-                'cacheExpire' => 0,
+                'cacheExpire' => 60,
 
             ]);
 
