@@ -13,25 +13,17 @@ if (! function_exists('news_showlist')) {
 }
 
 // Подгрузка библиотек-файлов плагина.
-// LoadPluginLang('turbo_yandex', 'frontend', '', 'turbo_yandex', ':');
 loadPluginLibrary('turbo_yandex', false);
 
 use Plugins\TurboYandex;
 
 // Регистрация страниц плагина.
 register_plugin_page('turbo_yandex', '', 'plugin_turbo_yandex', 0);
-register_plugin_page('turbo_yandex', 'category', 'plugin_turbo_yandex_category', 0);
+register_plugin_page('turbo_yandex', 'category', 'plugin_turbo_yandex', 0);
 
-function plugin_turbo_yandex()
+function plugin_turbo_yandex(array $params = [])
 {
-	$turboYandex = new TurboYandex();
+	$turboYandex = new TurboYandex($params);
 
     $turboYandex->generate();
-}
-
-function plugin_turbo_yandex_category($params)
-{
-	$turboYandex = new TurboYandex();
-
-    $turboYandex->generate($params['category']);
 }
