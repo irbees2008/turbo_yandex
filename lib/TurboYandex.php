@@ -7,6 +7,7 @@ use RuntimeException;
 
 // Базовые расширения PHP.
 use stdClass;
+use DateTime;
 
 /**
  * RSS поток для Yandex Turbo.
@@ -17,7 +18,7 @@ class TurboYandex
      * Номер версии плагина.
      * @const string
      */
-    const VERSION = '0.4.0';
+    const VERSION = '0.5.0';
 
     /**
      * Идентификатор плагина.
@@ -26,28 +27,35 @@ class TurboYandex
     protected $plugin = 'turbo_yandex';
 
     /**
-     * Кодировка.
-     * @var string
+     * Максимальное количество элементов в каждой ленте.
+     * @var int
      */
-    protected $encoding;
+    protected $countItems = 200;
+
+    /**
+     * Извлекать URL-адреса изображений из текста новости.
+     * @var bool
+     */
+    protected $extractImages;
+
+    /**
+     * Текущая страница ленты.
+     * @var int
+     */
+    protected $page = 1;
+
+    /**
+     * Текущая категория страницы ленты.
+     * @var stdClass
+     */
+    protected $category;
 
     /**
      * Создать экземпляр плагина.
      */
-    public function __construct()
+    public function __construct(array $params = [])
     {
-        $this->pluginLink = generatePluginLink($this->plugin, null);
-
-        global $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW;
-
-        // Disable executing of `index` action (widget plugins and so on..)
-        actionDisable('index');
-
-        // Suppress templates
-        $SUPRESS_TEMPLATE_SHOW = 1;
-        $SUPRESS_MAINBLOCK_SHOW = 1;
-
-        $this->encoding = trans('encoding');
+        $this->configure($params);
     }
 
     /**
@@ -59,50 +67,72 @@ class TurboYandex
         return self::VERSION;
     }
 
-    public function generate()
+    protected function configure(array $params)
     {
-        // Generate cache file name [ we should take into account SWITCHER plugin ]
-        // Take into account: FLAG: use_hide, check if user is logged in
-        $cacheFileName = md5($this->plugin.config('theme', 'default').config('home_url', home).config('default_lang', 'ru')).'.txt';
+        // Сначала зададим настройки из плагина.
+        $this->countItems = setting($this->plugin, 'countItems', 200);
+        $this->extractImages = setting($this->plugin, 'extractImages', false);
 
-        if (setting($this->plugin, 'cache', false)) {
-            $cacheData = cacheRetrieveFile($cacheFileName, setting($this->plugin, 'cacheExpire', 1440), $this->plugin);
-            if ($cacheData != false) {
-                // We got data from cache. Return it and stop
-                header("Content-Type: text/xml; charset=".$this->encoding);
-
-                echo $rendered;
-
-                return;
-            }
+        // Теперь зададим переданные настройки.
+        if (isset($params['page']) && is_numeric($params['page'])) {
+            $this->page = (int) $params['page'];
         }
 
+        $categories = catz();
+
+        if (isset($params['category']) && array_key_exists($params['category'], $categories)) {
+            $this->category = (object) $categories[$params['category']];
+        }
+    }
+
+    protected function cacheFilename()
+    {
+        $cacheFilename = $this->plugin;
+        $cacheFilename .= config('theme', 'default');
+        $cacheFilename .= config('home_url', home);
+        $cacheFilename .= config('default_lang', 'ru');
+        $cacheFilename .= $this->countItems;
+        $cacheFilename .= $this->extractImages;
+        $cacheFilename .= $this->page;
+
+        if ($this->category instanceof stdClass) {
+            $cacheFilename .= $this->category->id;
+        }
+
+        return md5($cacheFilename).'.txt';
+    }
+
+    public function generate()
+    {
         // Generate output
         $entries = [];
 
-        $old_locale = setlocale(LC_TIME, 0);
-        setlocale(LC_TIME, 'en_EN');
-
         // Fetch SQL record
-        $query = "select * from ".prefix."_news where approve=1 order by id desc limit 100";
+        $where = "where approve = 1";
+
+        if ($this->category instanceof stdClass) {
+            $catid = (int) $this->category->id;
+
+            $where .= " AND `catid` REGEXP '[[:<:]](".$catid.")[[:>:]]'";
+        }
+
+        $query = "select * from ".prefix."_news ".$where." order by id asc limit ".$this->countItems;
         $sqlData = database()->select($query);
 
         foreach ($sqlData as $row) {
             // Make standart system call in 'export' mode
-            $newsVars = news_showone(
-                $row['id'],
-                '',
-                array(
-                    'emulate' => $row,
-                    'style' => 'exportVars',
-                    'extractEmbeddedItems' => setting($this->plugin, 'extractEmbeddedItems', false),
-                    'plugin' => $this->plugin,
-                )
-            );
+            $newsVars = news_showone($row['id'], null, [
+                'emulate' => $row,
+                'style' => 'exportVars',
+                'extractEmbeddedItems' => setting($this->plugin, 'extract_images', false),
+                'plugin' => $this->plugin,
+
+            ]);
 
             $entry = new stdClass;
+            $entry->id = $row['id'];
             $entry->link = newsGenerateLink($row, false, 0, true);
-            $entry->pubDate = gmstrftime('%a, %d %b %Y %H:%M:%S GMT', $row['postdate']);
+            $entry->pubDate = date(DateTime::RFC822, $row['postdate']);
             $entry->title = $row['title'];
 
             $entry->content = $newsVars['short-story'].' '.$newsVars['full-story'];
@@ -121,9 +151,7 @@ class TurboYandex
             $entries[] = $entry;
         }
 
-        setlocale(LC_TIME, $old_locale);
-
-    	$rendered = $this->render([
+        return $this->render([
             'link' => config('home_url', home),
             'title' => config('home_title', engineName),
             'description' => config('description', null),
@@ -131,14 +159,13 @@ class TurboYandex
             'entries' => $entries,
 
         ]);
+    }
 
-        if (setting($this->plugin, 'cache', false)) {
-            cacheStoreFile($cacheFileName, $rendered, $this->plugin);
-        }
-
-    	header("Content-Type: text/xml; charset=".$this->encoding);
-
-        echo $rendered;
+    public function cachedContent()
+    {
+        return cacheRemember($this->plugin, $this->cacheFilename(), function () {
+            return $this->generate();
+        });
     }
 
     protected function stripTags(string $content)
@@ -157,6 +184,6 @@ class TurboYandex
             setting($this->plugin, 'localsource', 1)
         );
 
-        return view($tpath['channel'] . 'channel.tpl', $vars);
+        return view($tpath['channel'].'channel.tpl', $vars);
     }
 }
