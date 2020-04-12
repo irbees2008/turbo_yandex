@@ -7,98 +7,63 @@ if (! defined('NGCMS')) {
 
 // Дублирование глобальных переменных.
 $plugin = 'turbo_yandex';
-$pluginLink = generatePluginLink($plugin, null, [], [], true, true);
+$pluginLink = generatePluginLink($plugin, null, ['page' => 1], [], true, true);
 
 // Подгрузка библиотек-файлов плагина.
 plugins_load_config();
-LoadPluginLang($plugin, 'backend', '', '', ':');
+LoadPluginLang($plugin, 'config', '', '', ':');
 loadPluginLibrary($plugin, 'helpers');
 
 // Используем функции из пространства `Plugins`.
 use function Plugins\catz;
 use function Plugins\setting;
+use function Plugins\trans;
 use function Plugins\dd;
 
 // Подготовка переменных.
-
-// IF plugin 'XFIELDS' is enabled - load it to prepare `enclosure` integration
-$xfEnclosureValues = [
-    '' => null,
-
-];
-
-if (getPluginStatusActive('xfields')) {
-    loadPluginLibrary('xfields', 'common');
-
-    // Load XFields config
-    if (is_array($xarray = xf_configLoad())) {
-        foreach ($xarray['news'] as $id => $data) {
-            $xfEnclosureValues[$id] = "{$id} ($data[title])";
-        }
-    }
-}
-
-// For example - find 1st category with news for demo URL
-$demoCategory = null;
-
-foreach (catz() as $category) {
-    if ($category['posts'] > 0) {
-        $demoCategory = $category['alt'];
-        break;
-    }
-}
 
 // Заполнить параметры конфигурации.
 $cfg = [];
 
 // Описание плагина.
 array_push($cfg, [
-    'descr' => $lang[$plugin.':description'],
-
+    'descr' => trans($plugin.':description'),
 ]);
 
+// Ссылка на основную ленту.
 array_push($cfg, [
     'descr' => sprintf(
-        $lang[$plugin.':description_all'],
-        $pluginLink,
-        $pluginLink
+        trans($plugin.':description_all'), $pluginLink, $pluginLink
     ),
-
 ]);
 
-if ($demoCategory) {
-    array_push($cfg, [
-        'descr' => sprintf(
-            $lang[$plugin.':description_category'],
-            generatePluginLink($plugin, 'category', ['category' => $demoCategory], [], true, true),
-            $catz[$demoCategory]['name']
-        ),
+// Ссылка на ленту конкретной категории.
+foreach (catz() as $demoCategory) {
+    if ($demoCategory['posts'] > 0) {
+        array_push($cfg, [
+            'descr' => sprintf(
+                trans($plugin.':description_category'),
+                generatePluginLink($plugin, 'category', ['page' => 1, 'category' => $demoCategory['alt']], [], true, true),
+                $demoCategory['name']
+            ),
 
-    ]);
+        ]);
+
+        break;
+    }
 }
-
 
 // Основные настройки.
 array_push($cfg, [
     'mode' => 'group',
-    'title' => $lang[$plugin.':group_main'],
+    'title' => trans($plugin.':group_main'),
     'entries' => [
         [
-            'name' => 'skipcat',
-            'title' => $lang[$plugin.':skipcat'],
+            'name' => 'countItems',
+            'title' => trans($plugin.':countItems'),
+            'descr' => trans($plugin.':countItems#descr'),
             'type' => 'input',
-            'value' => setting($plugin, 'skipcat', null),
-
-        ], [
-            'name' => 'extractEmbeddedItems',
-            'title' => $lang[$plugin.':extractEmbeddedItems'],
-            'descr' => $lang[$plugin.':extractEmbeddedItems#descr'],
-            'type' => 'select',
-            'values' => [
-                $lang['noa'],
-                $lang['yesa']
-            ],
-            'value' => (int) setting($plugin, 'extractEmbeddedItems', 0),
+            'value' => (int) setting($plugin, 'countItems', 200),
 
         ],
 
@@ -109,16 +74,29 @@ array_push($cfg, [
 // Настройки отображения.
 array_push($cfg, [
     'mode' => 'group',
-    'title' => $lang[$plugin.':group_view'],
+    'title' => trans($plugin.':group_view'),
     'entries' => [
         [
-            'name' => 'localsource',
-            'title' => $lang[$plugin.':localsource'],
-            'descr' => $lang[$plugin.':localsource#descr'],
+            'name' => 'extractImages',
+            'title' => trans($plugin.':extractImages'),
+            'descr' => trans($plugin.':extractImages#descr'),
             'type' => 'select',
             'values' => [
-                0 => $lang[$plugin.':localsource_0'],
-                1 => $lang[$plugin.':localsource_1']
+                trans('noa'),
+                trans('yesa'),
+
+            ],
+            'value' => (int) setting($plugin, 'extractImages', false),
+
+        ], [
+            'name' => 'localsource',
+            'title' => trans($plugin.':localsource'),
+            'descr' => trans($plugin.':localsource#descr'),
+            'type' => 'select',
+            'values' => [
+                0 => trans($plugin.':localsource_0'),
+                1 => trans($plugin.':localsource_1'),
+
             ],
             'value' => (int) setting($plugin, 'localsource', 1),
 
@@ -131,23 +109,24 @@ array_push($cfg, [
 // Настройки кеширования.
 array_push($cfg, [
     'mode' => 'group',
-    'title' => $lang[$plugin.':group_cache'],
+    'title' => trans($plugin.':group_cache'),
     'entries' => [
         [
             'name' => 'cache',
-            'title' => $lang[$plugin.':cache'],
-            'descr' => $lang[$plugin.':cache#descr'],
+            'title' => trans($plugin.':cache'),
+            'descr' => trans($plugin.':cache#descr'),
             'type' => 'select',
             'values' => [
-                $lang['noa'],
-                $lang['yesa']
+                trans('noa'),
+                trans('yesa'),
+
             ],
             'value' => (int) setting($plugin, 'cacheExpire', 0),
 
         ], [
             'name' => 'cacheExpire',
-            'title' => $lang[$plugin.':cacheExpire'],
-            'descr' => $lang[$plugin.':cacheExpire#descr'],
+            'title' => trans($plugin.':cacheExpire'),
+            'descr' => trans($plugin.':cacheExpire#descr'),
             'type' => 'input',
             'value' => (int) setting($plugin, 'cacheExpire', 60),
 
