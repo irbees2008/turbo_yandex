@@ -121,7 +121,7 @@ array_push($cfg, [
                 trans('yesa'),
 
             ],
-            'value' => (int) setting($plugin, 'cacheExpire', 0),
+            'value' => (int) setting($plugin, 'cache', 0),
 
         ], [
             'name' => 'cacheExpire',
