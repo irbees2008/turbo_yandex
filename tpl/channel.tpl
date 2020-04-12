@@ -7,6 +7,7 @@
         <link>{{ link }}</link>
         <title>{{ title }}</title>
         <description>{{ description }}</description>
+        {# <turbo:analytics id="88888888" type="Yandex"></turbo:analytics> #}
         <language>{{ language }}</language>
 
         {% for entry in entries %}

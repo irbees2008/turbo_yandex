@@ -13,25 +13,29 @@ if (! function_exists('news_showlist')) {
 }
 
 // Подгрузка библиотек-файлов плагина.
-// LoadPluginLang('turbo_yandex', 'frontend', '', 'turbo_yandex', ':');
 loadPluginLibrary('turbo_yandex', false);
 
 use Plugins\TurboYandex;
+use function Plugins\trans;
 
 // Регистрация страниц плагина.
 register_plugin_page('turbo_yandex', '', 'plugin_turbo_yandex', 0);
-register_plugin_page('turbo_yandex', 'category', 'plugin_turbo_yandex_category', 0);
+register_plugin_page('turbo_yandex', 'category', 'plugin_turbo_yandex', 0);
 
-function plugin_turbo_yandex()
+function plugin_turbo_yandex(array $params = [])
 {
-	$turboYandex = new TurboYandex();
+    global $SUPRESS_TEMPLATE_SHOW, $SUPRESS_MAINBLOCK_SHOW;
 
-    $turboYandex->generate();
-}
+    // Disable executing of `index` action (widget plugins and so on..)
+    actionDisable('index');
 
-function plugin_turbo_yandex_category($params)
-{
-	$turboYandex = new TurboYandex();
+    // Suppress templates
+    $SUPRESS_TEMPLATE_SHOW = 1;
+    $SUPRESS_MAINBLOCK_SHOW = 1;
 
-    $turboYandex->generate($params['category']);
+	$turboYandex = new TurboYandex($params);
+
+    header("Content-Type: text/xml; charset=".trans('encoding'));
+
+    echo $turboYandex->cachedContent();
 }
