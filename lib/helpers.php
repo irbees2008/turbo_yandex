@@ -254,7 +254,7 @@ if (! function_exists(__NAMESPACE__.'\setting')) {
     }
 }
 
-if (! function_exists('starts_with')) {
+if (! function_exists(__NAMESPACE__.'\starts_with')) {
     /**
      * Determine if a given string starts with a given substring.
      * @param  string  $haystack
