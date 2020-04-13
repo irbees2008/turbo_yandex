@@ -5,7 +5,7 @@
 ID: turbo_yandex
 Name: RSS поток для Yandex Turbo
 Name_EN: RSS export for Yandex Turbo
-Version: 0.5.1
+Version: 0.6.0
 Acts: ppages
 File: turbo_yandex.php
 Config: config.php
