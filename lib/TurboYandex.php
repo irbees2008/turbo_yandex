@@ -7,7 +7,6 @@ use RuntimeException;
 
 // Базовые расширения PHP.
 use stdClass;
-use DateTime;
 
 /**
  * RSS поток для Yandex Turbo.
@@ -18,7 +17,7 @@ class TurboYandex
      * Номер версии плагина.
      * @const string
      */
-    const VERSION = '0.5.1';
+    const VERSION = '0.6.0';
 
     /**
      * Идентификатор плагина.
@@ -51,6 +50,30 @@ class TurboYandex
     protected $category;
 
     /**
+     * Расположение шаблонов плагина.
+     *  - `0` - шаблон сайта;
+     *  - `1` - директория плагина.
+     * @var int
+     */
+    protected $localsource;
+
+    /**
+     * Имена всех шаблонов плагина.
+     * @var array
+     */
+    protected $templates = [
+        'channel',
+        'entries',
+
+    ];
+
+    /**
+     * Список файлов шаблонов с полными путями, исключая имя шаблона.
+     * @var array
+     */
+    protected $templatePath = [];
+
+    /**
      * Создать экземпляр плагина.
      */
     public function __construct(array $params = [])
@@ -72,8 +95,10 @@ class TurboYandex
         // Сначала зададим настройки из плагина.
         $this->countItems = setting($this->plugin, 'countItems', 200);
         $this->extractImages = setting($this->plugin, 'extractImages', false);
+        $this->localsource = setting($this->plugin, 'localsource', 0);
+        $this->templatePath = $this->findTemplates($this->localsource);
 
-        // Теперь зададим переданные настройки.
+        // Теперь зададим переданные через URL-адрес настройки.
         if (isset($params['page']) && is_numeric($params['page'])) {
             $this->page = (int) $params['page'];
         }
@@ -93,6 +118,7 @@ class TurboYandex
         $cacheFilename .= config('default_lang', 'ru');
         $cacheFilename .= $this->countItems;
         $cacheFilename .= $this->extractImages;
+        $cacheFilename .= $this->localsource;
         $cacheFilename .= $this->page;
 
         if ($this->category instanceof stdClass) {
@@ -104,52 +130,7 @@ class TurboYandex
 
     public function generate()
     {
-        // Generate output
-        $entries = [];
-
-        // Fetch SQL record
-        $where = "where approve = 1";
-
-        if ($this->category instanceof stdClass) {
-            $catid = (int) $this->category->id;
-
-            $where .= " AND `catid` REGEXP '[[:<:]](".$catid.")[[:>:]]'";
-        }
-
-        $query = "select * from ".prefix."_news ".$where." order by id asc limit ".$this->countItems;
-        $sqlData = database()->select($query);
-
-        foreach ($sqlData as $row) {
-            // Make standart system call in 'export' mode
-            $newsVars = news_showone($row['id'], null, [
-                'emulate' => $row,
-                'style' => 'exportVars',
-                'extractEmbeddedItems' => setting($this->plugin, 'extract_images', false),
-                'plugin' => $this->plugin,
-
-            ]);
-
-            $entry = new stdClass;
-            $entry->id = $row['id'];
-            $entry->link = newsGenerateLink($row, false, 0, true);
-            $entry->pubDate = date(DateTime::RFC822, $row['postdate']);
-            $entry->title = $row['title'];
-
-            $entry->content = $newsVars['short-story'].' '.$newsVars['full-story'];
-            $entry->short = $this->stripTags($newsVars['short-story']);
-            $entry->full = $this->stripTags($newsVars['full-story']);
-
-            $entry->images = $newsVars['news']['embed']['images'] ?? [];
-
-            if (getPluginStatusActive('xfields')) {
-                $entry->xfields = $newsVars['p']['xfields'];
-            }
-
-            $entry->category = $newsVars['masterCategory'];
-            $entry->categories = $newsVars['category'];
-
-            $entries[] = $entry;
-        }
+        $entries = $this->fetchNewsList();
 
         return $this->render([
             'link' => config('home_url', home),
@@ -178,12 +159,81 @@ class TurboYandex
 
     public function render(array $vars)
     {
-        $tpath = locatePluginTemplates([
-                'channel',
-            ], $this->plugin,
-            setting($this->plugin, 'localsource', 1)
-        );
+        return view($this->template('channel'), $vars);
+    }
 
-        return view($tpath['channel'].'channel.tpl', $vars);
+    /**
+     * Извлечь список новостей из базы данных с дополнительной обработкой результата.
+     * @return object
+     */
+    protected function fetchNewsList()
+    {
+        $showResult = news_showlist([], [], [
+    		'plugin' => $this->plugin,
+    		'extractEmbeddedItems' => $this->extractImages,
+    		'extendedReturn' => true,
+    		'extendedReturnData' => true,
+    		'twig' => true,
+    		'overrideSQLquery' => $this->overrideSQLquery(),
+    		'overrideTemplatePath' => $this->templatePath('entries'),
+    		'overrideTemplateName' => 'entries',
+
+    	]);
+
+        return $showResult['data'];
+    }
+
+    protected function overrideSQLquery()
+    {
+        $where = "where approve = 1";
+
+        if ($this->category instanceof stdClass) {
+            $catid = (int) $this->category->id;
+
+            $where .= " AND `catid` REGEXP '[[:<:]](".$catid.")[[:>:]]'";
+        }
+
+        $start = ($this->page - 1) * $this->countItems;
+
+        return "select * from ".prefix."_news ".$where." order by id asc limit ".$start.",".$this->countItems;
+    }
+
+    /**
+     * Определить все пути к файлам шаблонов.
+     * @return array
+     */
+    protected function findTemplates(string $localsource, string $skin = null)
+    {
+        if (is_null($skin)) {
+            return locatePluginTemplates($this->templates, $this->plugin, $localsource);
+        }
+
+        return locatePluginTemplates($this->templates, $this->plugin, $localsource, $skin);
+    }
+
+    /**
+     * Получить путь к файлу шаблона.
+     * @param  string  $tpl
+     * @return string
+     */
+    protected function templatePath(string $tpl)
+    {
+        if (empty($path = $this->templatePath[$tpl])) {
+            throw new RuntimeException("Template [{$tpl}] is not define.");
+        }
+
+        return $path;
+    }
+
+    /**
+     * Получить полный путь к файлу шаблона, включая имя шаблона.
+     * @param  string  $tpl
+     * @return string
+     */
+    protected function template(string $tpl)
+    {
+        $file = ('url:' == substr($tpl, 0, 4)) ? '/'.substr($tpl, 5) : ($tpl . '.tpl');
+
+        return $this->templatePath($tpl).$file;
     }
 }
